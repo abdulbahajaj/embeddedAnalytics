@@ -122,14 +122,31 @@ class ClientWebSocket(tornado.websocket.WebSocketHandler):
 		logger.debug("A Client Websocket established")
 
 	def on_message(self, message):
-		self.application.pc.call(message=message,correlation_id=self.clientID)
-		logger.debug("Received message from " + self.clientID + ": " + message)
+		print("message: ",message)
+		message = json.loads(message)
+		messageID = message.get('id',None)
+		data = message.get('data', None)
+
+		correlation_id = self.clientID + ":" + messageID
+		print("correlation_id: ", correlation_id)
+		self.application.pc.call(message=data,correlation_id=correlation_id)
+		# logger.debug("Received message from " + self.clientID + ": " + message)
 
 	@classmethod
 	def on_response(cls,message,correlation_id):
-		cls.client_handler[correlation_id].write_message(message)
+		correlation_id = correlation_id.split(":")
+		print("correlation_id: ", correlation_id)
+		clientID = correlation_id[0]
+		messageID = correlation_id[1]
+		response = {'id': messageID, 'data': message.decode("utf-8")}
+
+		print("client_handler: ",cls.client_handler)
+
+
+		cls.client_handler[clientID].write_message(response)
 
 	def on_close(self):
+		print("connection closed")
 		logger.debug("connection closed")
 		if self.clientID is None: return
 		del ClientWebSocket.client_handler[self.clientID]
