@@ -10,24 +10,23 @@ from operations.query import query
 import logging as logger
 import pika
 import time
+import json
 from operations.query import query
 logger.basicConfig(level=logger.DEBUG)
 
-
 def onQuery(ch, method, props, body):
 	ch.basic_ack(delivery_tag = method.delivery_tag)
-
-
-
+	body = json.loads(body)
+	response = query(queryDescription=body)
+	response = json.dumps(response)
 	ch.basic_publish(
 		exchange = '',
 		routing_key = props.reply_to,
 		properties = pika.BasicProperties(
 			correlation_id = props.correlation_id
 		),
-		body=str("Processor to tornado")
+		body=response
 	)
-
 
 def main():
 	connection = pika.BlockingConnection(
@@ -44,3 +43,5 @@ def main():
 
 if __name__ == '__main__':
 	main()
+
+queryDescription = [dict(operation='select',collectionID="dummy",userID="dummy")]
