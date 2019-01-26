@@ -16,7 +16,6 @@ logger.basicConfig(level=logger.DEBUG)
 
 def onQuery(ch, method, props, body):
 	ch.basic_ack(delivery_tag = method.delivery_tag)
-	print("body: ",body)
 	body = json.loads(body.decode("utf-8"))
 	response = query(queryDescription=body)
 	response = json.dumps(response)

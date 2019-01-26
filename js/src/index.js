@@ -1,11 +1,17 @@
 import APPManager from './APPManager.js'
 
 var core = function(){
-	this.init = (username,apikey,onReady=function(){}) => {
-
+	this.init = (public_key,onReady=function(){}) => {
+		APPManager.connect(public_key);
 	}
-	this.query = (queryDescription, callBack) => {
-		APPManager.addQuery(queryDescription,callBack)
+	this.query = new function(queryDesc=[]){
+		this.select = (function(collectionID){
+			queryDesc.push({operation: 'select', collectionID: collectionID});
+			return new this.query(queryDesc);
+		}).bind(this);
+		this.execute = function(callBack){
+			APPManager.addQuery(queryDesc,callBack);
+		}
 	}
 }
 

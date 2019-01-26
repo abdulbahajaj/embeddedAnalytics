@@ -1,12 +1,10 @@
 import { createStore } from 'redux'
 
-
 const PARAMETERS = {
 	host: "localhost",
 	port: 8888,
 	path: "client"
 }
-
 
 const ACTIONS = {
 	ADD_QUERY: "addQuery",
@@ -38,17 +36,6 @@ const queriesBufferReducer = (state, action) => {
 }
 
 const queriesBuffer = createStore(queriesBufferReducer,{queries: [], connected: false})
-
-// const responseBufferReducer = (state, action) => {
-// 	switch (action.type) {
-// 		case ACTIONS.ADD_RESPONSE:
-// 			state.responses.push(action.response)
-// 			break;
-// 	}
-// 	return state
-// }
-
-// const responseBuffer = createStore(responseBufferReducer,{responses: []})
 
 const APPManager = new function(){
 	this.subscribe = (func) => {
@@ -84,24 +71,9 @@ const APPManager = new function(){
 }
 
 const connect = function(host, port, path){
-	var connection = new WebSocket('ws://' + host + ":" + port + "/" + path);
 
+	var connection = null;
 	var allCallBacks = {};
-
-	connection.onopen = () => {
-		APPManager.connected();
-	};
-	connection.onerror = (error) => {
-		console.log('WebSocket Error ' + error);
-	};
-	connection.onmessage = (response) => {
-		response = response.data;
-		response = JSON.parse(response);
-		var data = response.data;
-		var messageID = response.id;
-		data = JSON.parse(data);
-		allCallBacks[messageID](data);
-	};
 
 	function makeid() {
 		var text = "";
@@ -110,18 +82,48 @@ const connect = function(host, port, path){
 			text += possible.charAt(Math.floor(Math.random() * possible.length));
 		return text;
 	}
+
+	this.connect = function(public_key){
+		connection = new WebSocket('ws://' + host + ":" + port + "/" + path);
+
+		connection.onopen = () => {
+			APPManager.connected();
+			var request = {}
+			request.creds = {"public_key": public_key};
+			request.type = "auth";
+			request = JSON.stringify(request)
+			connection.send(request);
+		};
+		connection.onerror = (error) => {
+			console.log('WebSocket Error ' + error);
+		};
+		connection.onmessage = (response) => {
+			response = response.data;
+			response = JSON.parse(response);
+			var data = response.data;
+			var messageID = response.id;
+			data = JSON.parse(data);
+			allCallBacks[messageID](data);
+		};
+	}
+
 	this.send = (message, callBack) => {
 		const messageID = makeid();
 		allCallBacks[messageID] = callBack;
-		var message = {data: message, id: messageID};
+		var message = {data: message, type: "query", id: messageID};
 		message = JSON.stringify(message);
 
 		connection.send(message);		
 	}
+}
+const Connection = new connect(PARAMETERS.host, PARAMETERS.port, PARAMETERS.path);
 
+
+APPManager.connect = (public_key) => {
+	Connection.connect(public_key);
 }
 
-const Connection = new connect(PARAMETERS.host, PARAMETERS.port, PARAMETERS.path);
+
 
 const startProcessing = function(){
 	this.subscription = null;
