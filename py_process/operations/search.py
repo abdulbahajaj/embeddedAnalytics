@@ -1,4 +1,4 @@
-def search(inputData,filter={}):
+def search(inputData, userID=None, filter={}):
 	"""
 	Performs search on the content. 
 

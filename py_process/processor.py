@@ -16,8 +16,25 @@ logger.basicConfig(level=logger.DEBUG)
 
 def onQuery(ch, method, props, body):
 	ch.basic_ack(delivery_tag = method.delivery_tag)
-	body = json.loads(body.decode("utf-8"))
-	response = query(queryDescription=body)
+
+	body = body.decode("utf-8")
+	body = json.loads(body)
+
+	print("body: ", body)
+
+	userID = body.get("user_id", None)
+	print("userID", userID)
+	if userID is None: return
+
+
+
+	queryDesc = body.get('query', None)
+	print("queryDesc", queryDesc)
+	print("queryDesc type", type(queryDesc))
+	if queryDesc is None: return
+
+	response = query(queryDescription=queryDesc, userID=userID)
+
 	response = json.dumps(response)
 	ch.basic_publish(
 		exchange = '',
@@ -45,3 +62,24 @@ if __name__ == '__main__':
 	main()
 
 queryDescription = [dict(operation='select',collectionID="dummy",userID="dummy")]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

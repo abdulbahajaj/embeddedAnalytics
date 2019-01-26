@@ -90,11 +90,8 @@ class RabbitMQConnection(object):
 
 class ClientWebSocket(tornado.websocket.WebSocketHandler):
 	client_handler = {}
-
 	client_id = None
-
 	permission = None
-
 	company = None
 
 	def open(self):
@@ -109,32 +106,48 @@ class ClientWebSocket(tornado.websocket.WebSocketHandler):
 
 	def authenticate(self, creds):
 		public_key = creds.get("public_key")
-
 		company = user_actions.get_company_from_API_key(public_key = public_key)
 		if company is not None:
 			self.permission['public_key'] = True
 			self.company = company
-			print(self.company)
+			response = dict(type="auth", status="connected")
+			print(str(company.id))
+			self.write_message(response)
+			return
 
+	def query(self, query):
+		if self.company is None:
+			#Raise exception
+			return
+
+		message_id = query.get('id',None)
+		data = query.get('query', None)
+		correlation_id = self.client_id + ":" + message_id
+		message = dict(query=data, user_id = str(self.company.id))
+		message = json.dumps(message)
+
+		self.application.pc.call(message=message,correlation_id=correlation_id)
 
 	def on_message(self, message):
+		print("------------------------")
+		print("on_message: ", message)
 		message = json.loads(message)
 		message_type = message.get("type", None)
 		if message_type is None: pass
 		elif message_type == "auth":
 			self.authenticate(creds = message.get('creds'))
 		elif message_type == "query":
-			message_id = message.get('id',None)
-			data = message.get('data', None)
-			correlation_id = self.client_id + ":" + message_id
-			self.application.pc.call(message=data,correlation_id=correlation_id)
+			self.query(query=message)
+		else:
+			# Raise exception
+			pass
 
 	@classmethod
 	def on_response(cls,message,correlation_id):
 		correlation_id = correlation_id.split(":")
 		client_id = correlation_id[0]
 		message_id = correlation_id[1]
-		response = {'id': message_id, 'data': message.decode("utf-8")}
+		response = dict(id=message_id, type="query", data=message.decode("utf-8"))
 		cls.client_handler[client_id].write_message(response)
 
 	def on_close(self):

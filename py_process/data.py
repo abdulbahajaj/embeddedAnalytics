@@ -273,6 +273,10 @@ def pull(userID,collectionID,timeIntervalStart=None, timeIntervalEnd=None):
 	partitionList = get(key=collectionKeys.get('partition').get('list'))
 	basePartitionDataPath = collectionKeys.get('partition').get('data')
 
+	if not exists(key=collectionKeys.get('exists')):
+		#raise exception
+		return []
+
 	if timeIntervalStart is None:
 		timeIntervalStart = int(partitionList[0])
 	if timeIntervalEnd is None:

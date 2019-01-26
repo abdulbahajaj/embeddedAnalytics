@@ -40,7 +40,7 @@ def createDummyData(userID,collectionID,sampleSize):
 
 
 def main():
-	createDummyData(userID="dummy", collectionID="dummy", sampleSize=10000)
+	createDummyData(userID="5c4aae274cd635708233e8dc", collectionID="dummy", sampleSize=10000)
 
 
 

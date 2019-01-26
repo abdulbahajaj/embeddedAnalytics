@@ -7,7 +7,7 @@ operationsHash = {}
 operationsHash['select'] = select
 operationsHash['search'] = search
 
-def query(queryDescription):
+def query(queryDescription, userID):
 	"""
 	Processes the query description and returns a list containing the query result
 
@@ -20,24 +20,20 @@ def query(queryDescription):
 	"""
 
 	outputData = []
-	userID = None
-	collectionID = None
 
 	for operationDescription in queryDescription:
 
-		opType = operationDescription.get('operation', None)
+		opType = operationDescription.get('type', None)
 		assert opType is not None, MissingOperationType()
-		del operationDescription['operation']
-
-		if opType == 'select':
-			userID = operationDescription.get('userID', None)
-			collectionID = operationDescription.get('collectionID', None)
-			print(userID,collectionID)
+		del operationDescription['type']
 
 		operation = operationsHash.get(opType,None)
 		assert operation is not None,WrongOperationType(context=dict(opType=opType))
 
-		outputData = operation(inputData=outputData, **operationDescription)
+		outputData = operation(
+			inputData=outputData, 
+			userID=userID, 
+			**operationDescription)
 
 	return outputData
 

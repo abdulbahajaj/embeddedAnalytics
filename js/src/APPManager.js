@@ -32,6 +32,7 @@ const queriesBufferReducer = (state, action) => {
 			state.connected = false;
 			break;
 	}
+	// console.log("state: ", state);
 	return state
 }
 
@@ -87,7 +88,6 @@ const connect = function(host, port, path){
 		connection = new WebSocket('ws://' + host + ":" + port + "/" + path);
 
 		connection.onopen = () => {
-			APPManager.connected();
 			var request = {}
 			request.creds = {"public_key": public_key};
 			request.type = "auth";
@@ -100,17 +100,25 @@ const connect = function(host, port, path){
 		connection.onmessage = (response) => {
 			response = response.data;
 			response = JSON.parse(response);
-			var data = response.data;
-			var messageID = response.id;
-			data = JSON.parse(data);
-			allCallBacks[messageID](data);
+
+			if(response.type == "query"){
+				var data = response.data;
+				var messageID = response.id;
+				data = JSON.parse(data);
+				allCallBacks[messageID](data);
+			} 
+			else if(response.type == 'auth'){
+				if(response.status == "connected"){
+					APPManager.connected();
+				}
+			}
 		};
 	}
 
 	this.send = (message, callBack) => {
 		const messageID = makeid();
 		allCallBacks[messageID] = callBack;
-		var message = {data: message, type: "query", id: messageID};
+		var message = {query: message, type: "query", id: messageID};
 		message = JSON.stringify(message);
 
 		connection.send(message);		
@@ -134,8 +142,9 @@ const startProcessing = function(){
 
 		for(var index in queriesDesc){
 			var queryDesc = queriesDesc[index];
-			var query = JSON.stringify(queryDesc.query);
-			Connection.send(query, queryDesc.callBack);
+			console.log(queryDesc)
+			// var query = JSON.stringify(queryDesc.query);
+			Connection.send(queryDesc.query, queryDesc.callBack);
 		}
 	}
 	this.processQueries = this.processQueries.bind(this);
