@@ -6,36 +6,39 @@
 #Sends the key to tornado. Tornado formalates the result and send it to client
 
 # import redis
-from operations.query import query
+# from operations.query import query
 import logging as logger
 import pika
-import time
+# import time
 import json
 from operations.query import query
 logger.basicConfig(level=logger.DEBUG)
+import messages
 
 def onQuery(ch, method, props, body):
-	ch.basic_ack(delivery_tag = method.delivery_tag)
+	try:
+		ch.basic_ack(delivery_tag = method.delivery_tag)
 
-	body = body.decode("utf-8")
-	body = json.loads(body)
+		body = body.decode("utf-8")
+		body = json.loads(body)
 
-	print("body: ", body)
+		userID = body.get("user_id", None)
+		if userID is None: return
 
-	userID = body.get("user_id", None)
-	print("userID", userID)
-	if userID is None: return
+		queryDesc = body.get('query', None)
+		if queryDesc is None: return
 
+		data = query(queryDescription=queryDesc, userID=userID)
+		response, http_code = messages.jsonify_message(
+			dictify=True,
+			message=messages.query_executed_successfully())
 
+		response['data'] = data
+		response = json.dumps(response)
 
-	queryDesc = body.get('query', None)
-	print("queryDesc", queryDesc)
-	print("queryDesc type", type(queryDesc))
-	if queryDesc is None: return
+	except Exception as err:
+		response, http_code = messages.jsonify_message(message=err)
 
-	response = query(queryDescription=queryDesc, userID=userID)
-
-	response = json.dumps(response)
 	ch.basic_publish(
 		exchange = '',
 		routing_key = props.reply_to,
@@ -44,6 +47,7 @@ def onQuery(ch, method, props, body):
 		),
 		body=response
 	)
+
 
 def main():
 	connection = pika.BlockingConnection(
@@ -56,30 +60,5 @@ def main():
 	print(" [x] Awaiting RPC requests")
 	channel.start_consuming()
 
-
-
 if __name__ == '__main__':
 	main()
-
-queryDescription = [dict(operation='select',collectionID="dummy",userID="dummy")]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

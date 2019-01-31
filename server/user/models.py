@@ -14,7 +14,8 @@ class Company(mongoengine.Document):
 class User(mongoengine.Document):
 	company_key_encrypted = mongoengine.BinaryField(required=True)
 	password_hash = mongoengine.BinaryField(required=True)
-
 	email = mongoengine.StringField(required=True)
 	created = mongoengine.IntField()
 	company = mongoengine.ReferenceField(Company)
+
+

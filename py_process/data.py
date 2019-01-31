@@ -2,6 +2,7 @@ import uuid
 import time
 import redis
 import ujson as json
+import messages
 # import json
 # import rapidjson as json
 
@@ -9,7 +10,7 @@ redisConnection = redis.Redis(
 	host='localhost',
 	port=6379)
 
-def set(key,data): 
+def set(key,data):
 	'''
 	Sets the data to the given hash key
 
@@ -23,7 +24,7 @@ def set(key,data):
 	redisConnection.set(key,data)
 	return True
 
-def get(key,parse=True): 
+def get(key,parse=True):
 	'''
 	Retrieve the data stored in the given key
 
@@ -192,7 +193,7 @@ def updateWritingPartition(collectionKeys):
 
 	:returns: None
 	'''
-	
+
 	currentCount = get(key=collectionKeys.get("partition").get("current").get("count"))
 
 	if currentCount > 100000:
@@ -263,7 +264,7 @@ def pull(userID,collectionID,timeIntervalStart=None, timeIntervalEnd=None):
 
 	:param userID: unique string that identifies the user
 	:param collectionID: unique string that identifies the collection
-	:param timeIntervalStart: an optional time selector that identifies interval start 
+	:param timeIntervalStart: an optional time selector that identifies interval start
 	:param timeIntervalEnd: an optional time selector that identifies interval end
 
 	:returns: a list of data
@@ -274,8 +275,7 @@ def pull(userID,collectionID,timeIntervalStart=None, timeIntervalEnd=None):
 	basePartitionDataPath = collectionKeys.get('partition').get('data')
 
 	if not exists(key=collectionKeys.get('exists')):
-		#raise exception
-		return []
+		raise messages.collection_not_found()
 
 	if timeIntervalStart is None:
 		timeIntervalStart = int(partitionList[0])
@@ -289,51 +289,6 @@ def pull(userID,collectionID,timeIntervalStart=None, timeIntervalEnd=None):
 		result += get(key=basePartitionDataPath + str(partition),parse=True)
 
 	return result
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

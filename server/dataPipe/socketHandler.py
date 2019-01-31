@@ -1,12 +1,14 @@
 import json
 import tornado.websocket
 from pika.adapters.tornado_connection import TornadoConnection
-import uuid
+# import uuid
 import pika
 import logging as logger
 from config import Config
 import utils
 from user import actions as user_actions
+import messages
+
 
 class RabbitMQConnection(object):
 	__io_loop=None
@@ -53,7 +55,7 @@ class RabbitMQConnection(object):
 		self.__connection = connection
 		self.__connection.channel(self.__on_channel_open)
 
-	def __call(self,message,correlation_id):
+	def __call(self,message,correlation_id): 
 		self.__channel.basic_publish(exchange='',
 			routing_key='rpc_queue',
 			properties=pika.BasicProperties(
@@ -83,7 +85,7 @@ class RabbitMQConnection(object):
 		logger.debug('PikaClient: Channel %s open, Declaring exchange' % channel)
 		self.__channel = channel
 
-		result = self.__channel.queue_declare(
+		self.__channel.queue_declare(
 			callback=self.__on_queue_open,
 			exclusive=True
 		)
@@ -117,8 +119,7 @@ class ClientWebSocket(tornado.websocket.WebSocketHandler):
 
 	def query(self, query):
 		if self.company is None:
-			#Raise exception
-			return
+			raise messages.user_not_logged_in()
 
 		message_id = query.get('id',None)
 		data = query.get('query', None)
@@ -128,9 +129,17 @@ class ClientWebSocket(tornado.websocket.WebSocketHandler):
 
 		self.application.pc.call(message=message,correlation_id=correlation_id)
 
+
 	def on_message(self, message):
-		print("------------------------")
-		print("on_message: ", message)
+		try:
+			self.process_message(message=message)
+		except messages.unknown_message as err:
+			return messages.jsonify_message(message=err)
+		except Exception as err:
+			return messages.jsonify_message(message=err)
+
+
+	def process_message(self, message):
 		message = json.loads(message)
 		message_type = message.get("type", None)
 		if message_type is None: pass
@@ -139,8 +148,7 @@ class ClientWebSocket(tornado.websocket.WebSocketHandler):
 		elif message_type == "query":
 			self.query(query=message)
 		else:
-			# Raise exception
-			pass
+			raise messages.unknown_message()
 
 	@classmethod
 	def on_response(cls,message,correlation_id):
@@ -155,64 +163,9 @@ class ClientWebSocket(tornado.websocket.WebSocketHandler):
 		logger.debug("connection closed")
 		if self.client_id is None: return
 		del ClientWebSocket.client_handler[self.client_id]
-	
+
 	def check_origin(self, origin):
 	    return True
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

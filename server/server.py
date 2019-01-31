@@ -3,15 +3,14 @@ import tornado.web
 import json
 import os
 import logging as logger
-from dataPipe.socketHandler import RabbitMQConnection, ClientWebSocket 
+from dataPipe.socketHandler import RabbitMQConnection, ClientWebSocket
 from config import Config
 import flask
 from tornado.httpserver import HTTPServer
 from tornado.wsgi import WSGIContainer
-from user import blueprint as user_blueprint
 from schema import schema
-# from user import models
 from user import actions as user_actions
+import messages
 
 settings = dict(
 	debug = True
@@ -28,31 +27,33 @@ app.secret_key = '''c05b9ea1593b432788cc24b256f7ae002c67382868bd42a8abba26d5f511
 
 @app.route("/graphql")
 def graphQL():
-	user = user_actions.get_logged_user()
-	print("user: ", user)
-	query = flask.request.data.decode("utf-8")
-	query = json.loads(query)
-	query = query.get('query', None)
-	if query is None:
-		return "Please provide a query"
-
-	result = schema.execute(query, context={"user": user})
-	if result.errors is not None or result.data is None:
-		print(result.errors)
-		return "an error has occured"
-
-	result = json.dumps(dict(result.data))
-	return result
+	try:
+		try:
+			user = user_actions.get_logged_user()
+		except messages.user_not_logged_in:
+			user = None
+		query = flask.request.data.decode("utf-8")
+		query = json.loads(query)
+		query = query.get('query', None)
+		if query is None:
+			return "Please provide a query"
+		result = schema.execute(query, context={"user": user})
+		if result.errors is not None or result.data is None:
+			errors = [str(error) for error in result.errors]
+			errors = json.dumps(errors)
+			return errors
+		result = json.dumps(dict(result.data))
+		return result
+	except Exception as err:
+		raise err
+		return messages.jsonify_message(message=err)
 
 def main():
-	logger.debug("Starting server")
 	io_loop = tornado.ioloop.IOLoop.instance()
 
 	pc = RabbitMQConnection(io_loop)
 	application.pc = pc
 	application.pc.connect()
-
-	app.register_blueprint(user_blueprint.get_blueprint())
 	http_server = HTTPServer(WSGIContainer(app))
 	http_server.listen(Config.Flask.port)
 
@@ -64,26 +65,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

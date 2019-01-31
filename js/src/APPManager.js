@@ -32,7 +32,6 @@ const queriesBufferReducer = (state, action) => {
 			state.connected = false;
 			break;
 	}
-	// console.log("state: ", state);
 	return state
 }
 
@@ -131,8 +130,6 @@ APPManager.connect = (public_key) => {
 	Connection.connect(public_key);
 }
 
-
-
 const startProcessing = function(){
 	this.subscription = null;
 	this.processQueries = () => {
@@ -142,8 +139,6 @@ const startProcessing = function(){
 
 		for(var index in queriesDesc){
 			var queryDesc = queriesDesc[index];
-			console.log(queryDesc)
-			// var query = JSON.stringify(queryDesc.query);
 			Connection.send(queryDesc.query, queryDesc.callBack);
 		}
 	}

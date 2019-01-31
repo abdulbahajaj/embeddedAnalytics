@@ -4,6 +4,8 @@ import utils
 import time
 import redis
 import json
+import messages
+
 redisConnection = redis.Redis(
 	host='localhost',
 	port=6379)
@@ -61,11 +63,8 @@ def generate_keys(company, password):
 	)
 
 def register(email, password):
-
 	if len(models.User.objects(email=email)) > 0:
-		#raise exception
-		return None
-
+		raise messages.user_exists()
 
 	company = models.Company()
 	company.created = time.time()
@@ -86,22 +85,31 @@ def register(email, password):
 	user.password_hash = keys.get('password_hash').get('string')
 	user.save()
 
+	login(email=email, password=password)
+
 	return user
 
+def logout():
+	session_id = flask.session.get('id',None)
+	if session_id is None: return messages.user_logged_out()
+	del flask.session['id']
+	redisConnection.delete("session:" + session_id)
+	return messages.user_logged_out()
+
 def login(email, password):
+	logout()
 	user = models.User.objects(email=email)
-	if len(user) == 0:
-		#raise exception
-		return None
+	if len(user) != 1:
+		raise messages.user_not_found()
 	user = user[0]
 	if not utils.check_hash(string=password, hashed_string=user.password_hash):
-		#raise exception
-		return None
+		raise messages.user_not_found()
 
 	session_id = utils.generate_id()
 
 	while redisConnection.get("session:" + session_id) is not None:
 		session_id = utils.generate_id()
+
 
 	flask.session['id'] = session_id
 	session_content = {"user_id": str(user.id)}
@@ -110,57 +118,33 @@ def login(email, password):
 
 	return user
 
-def logout():
-	session_id = flask.session.get('id',None)
-	if session_id is None: return
-	del flask.session['id']
-
-	redisConnection.delete("session:" + session_id)
-
 def get_logged_user():
 	session_id = flask.session.get('id',None)
 	if session_id is None: 
-		#raise exception
-		return
+		raise messages.user_not_logged_in()
+
 	user = redisConnection.get("session:" + session_id)
 	if user is None:
-		#raise exception
-		return
+		logout()
+		raise messages.user_not_logged_in()
 
-	user = json.loads(user)
+	try:
+		user = json.loads(user)
+	except:
+		logout()
+		raise messages.user_not_logged_in()
+
 	user_id = user.get("user_id", None)
 	if user_id is None:
-		#raise exception
-		return
+		logout()
+		raise messages.user_not_logged_in()
 
 	user = models.User.objects(id = user_id)
 	if len(user) != 1:
-		#raise exception
-		return None
+		logout()
+		raise messages.user_not_logged_in()
 
 	return user[0]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

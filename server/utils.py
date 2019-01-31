@@ -12,6 +12,7 @@ def hash(string):
 	return dict(string=string)
 
 def check_hash(string, hashed_string):
+	string = string.encode('utf8')
 	if bcrypt.hashpw(string ,hashed_string) != hashed_string:
 		return False
 	return True
@@ -27,3 +28,5 @@ def decrypt(ciphertext, password):
 	return dict(
 		text=text
 	)
+
+
